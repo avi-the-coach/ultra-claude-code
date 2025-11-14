@@ -27,22 +27,19 @@ function Chat({ socket, sessionId }) {
     if (!socket) return;
 
     socket.on('claudeStreamStart', () => {
-      console.log('🎬 Stream started');
       setIsProcessing(true);
       setStreamingText('');
     });
 
     socket.on('claudeStreamChunk', (data) => {
-      console.log('📝 Stream chunk:', data.text);
       setStreamingText((prev) => prev + data.text);
     });
 
     socket.on('claudeStreamEnd', () => {
-      console.log('🏁 Stream ended');
+      // Stream ended
     });
 
     socket.on('claudeResponse', (data) => {
-      console.log('✅ Response received:', data);
       setIsProcessing(false);
 
       // Add assistant message (handle both formats)

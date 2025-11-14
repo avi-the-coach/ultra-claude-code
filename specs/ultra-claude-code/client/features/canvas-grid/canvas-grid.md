@@ -574,18 +574,22 @@ function App() {
 - [x] Create GridComponent wrapper
 - [x] Create ComponentRegistry
 - [x] Implement grid calculation logic
-- [x] Implement drag behavior
-- [ ] Implement resize behavior
+- [x] Implement drag behavior (with direct manipulation, no ghost)
+- [x] Implement resize behavior (with 8 handles)
 - [x] Implement snap-to-grid
-- [ ] Implement window resize handling
-- [ ] Implement session persistence
+- [x] Implement mouseleave detection
+- [x] Disable text selection during drag/resize
+- [x] Constrain mouse to canvas bounds
+- [x] Make resize handles thinner (6px corners, 4px edges)
+- [x] Implement session persistence (localStorage)
 - [x] Update App.jsx to use Canvas
 - [x] Update Chat toggle to work with new system
-- [x] Add CSS for grid, components, handles, ghosts
+- [x] Add CSS for grid, components, handles
+- [ ] Implement Settings modal with config.json management
+- [ ] Implement grid visibility modes (always/dragging/never)
+- [ ] Remove debug console.logs
 - [ ] Test with different grid configurations
-- [ ] Test window resize behavior
-- [ ] Test persistence (refresh browser)
-- [x] Test chat toggle integration
+- [ ] Test cross-browser (Chrome, Firefox, Edge)
 
 ---
 
@@ -595,12 +599,16 @@ function App() {
 ✅ Components snap to grid cleanly
 ✅ Components can overlap and layer freely
 ✅ Dragged component appears above others (z-index)
-✅ Ghost outline shows during drag
-✅ Cursor changes appropriately (grab/grabbing)
+✅ Direct manipulation (no ghost - component moves in real-time)
+✅ Cursor changes appropriately (grab/grabbing, resize cursors)
 ✅ Chat toggle shows/hides Chat component
 ✅ Layout persists across browser refresh
 ✅ Grid is configurable via config.json
 ✅ All components managed uniformly (no hardcoded components)
 ✅ System ready for future component types
-✅ Window resize maintains layout proportions
-✅ Components can be resized by borders/corners
+✅ Components can be resized by 8 handles (4 corners + 4 edges)
+✅ Mouse leaving canvas auto-ends drag/resize
+✅ Text selection disabled during drag/resize
+✅ Mouse coordinates constrained to canvas bounds
+⏳ Settings modal to edit config.json (Story 6 - in progress)
+⏳ Grid visibility modes (always/dragging/never) (Story 6 - in progress)

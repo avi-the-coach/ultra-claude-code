@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import GridComponent from './GridComponent';
 import ComponentRegistry from './ComponentRegistry';
-import config from '../../config.json';
+import { useConfig } from '../hooks/useConfig';
 import './Canvas.css';
 
 // Default component layout
@@ -29,12 +29,14 @@ const defaultComponents = [
 function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange }) {
   const canvasRef = useRef(null);
   const components = propsComponents || defaultComponents;
+  const { config } = useConfig();
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [cellSize, setCellSize] = useState({ width: 0, height: 0 });
   const [dragState, setDragState] = useState(null); // { componentId, offsetX, offsetY, originalPos }
   const [resizeState, setResizeState] = useState(null); // { componentId, handle, originalSize, startPos }
 
   const gridConfig = config.canvasGrid;
+  const isDraggingOrResizing = dragState !== null || resizeState !== null;
 
   // Calculate grid cell sizes
   useEffect(() => {
@@ -77,8 +79,6 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
       offsetY: event.clientY - rect.top,
       originalPos: { ...component.gridPos }
     });
-
-    console.log('Drag started:', componentId);
   };
 
   const handleDragMove = useCallback((event) => {
@@ -119,8 +119,6 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     if (!dragState) return;
 
     setDragState(null);
-
-    console.log('Drag ended');
   }, [dragState]);
 
   // Resize handlers
@@ -134,8 +132,6 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
       originalSize: { ...component.gridPos },
       startPos: { x: event.clientX, y: event.clientY }
     });
-
-    console.log('Resize started:', componentId, handle);
   };
 
   const handleResizeMove = useCallback((event) => {
@@ -242,8 +238,6 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     if (!resizeState) return;
 
     setResizeState(null);
-
-    console.log('Resize ended');
   }, [resizeState]);
 
   // Mouse event listeners for drag
@@ -261,7 +255,6 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     const handleMouseLeave = () => {
       // Mouse left the canvas area - end drag
       cleanup();
-      console.log('Mouse left canvas, ending drag');
     };
 
     document.addEventListener('mousemove', handleDragMove);
@@ -301,7 +294,6 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     const handleMouseLeave = () => {
       // Mouse left the canvas area - end resize
       cleanup();
-      console.log('Mouse left canvas, ending resize');
     };
 
     document.addEventListener('mousemove', handleResizeMove);
@@ -328,10 +320,10 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
 
   // Render grid lines
   const renderGrid = () => {
+    // Grid visibility logic
     if (gridConfig.gridVisibility === 'never') return null;
+    if (gridConfig.gridVisibility === 'dragging' && !isDraggingOrResizing) return null;
     if (canvasSize.width === 0 || canvasSize.height === 0) return null;
-
-    console.log('Rendering grid:', { canvasSize, cellSize, gridConfig });
 
     const lines = [];
 

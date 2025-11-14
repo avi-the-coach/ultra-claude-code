@@ -140,84 +140,111 @@ This document breaks down the Canvas Grid feature into incremental, testable use
 
 ---
 
-## Story 6: Window Resize Handling
+## Story 6: Configuration & Polish
 
-**Goal**: Make grid responsive to window resize while maintaining layout.
-
-**Tasks**:
-- [ ] Add window resize event listener
-- [ ] Recalculate grid cell size on window resize
-- [ ] Enforce cellMinSize constraint
-- [ ] Components maintain grid position (x, y, w, h in cells)
-- [ ] Pixel dimensions scale automatically
-- [ ] Handle overflow (scrollbars if needed)
-- [ ] Debounce resize events for performance
-
-**Acceptance Criteria**:
-- ✅ Grid cell size recalculates on window resize
-- ✅ Components maintain grid positions (e.g., 2×3 stays 2×3)
-- ✅ Components scale proportionally with window
-- ✅ Cell size never goes below minimum (50px by default)
-- ✅ Scrollbars appear if content exceeds viewport
-- ✅ No jank or performance issues during resize
-
-**How to Test**:
-1. Resize browser window → verify grid cells scale
-2. Verify components maintain grid positions
-3. Make window very small → verify cells hit minimum size
-4. Make window very large → verify cells grow proportionally
-5. Check performance (no lag during resize)
-6. Test with components at various positions
-
-**Estimated Time**: 1-2 hours
-
----
-
-## Story 7: Configuration & Polish
-
-**Goal**: Add configuration support and polish the UX.
+**Goal**: Implement Settings modal to manage config.json settings and polish the UX.
 
 **Tasks**:
-- [ ] Load all config from config.json (columns, rows, cellMinSize, etc.)
-- [ ] Implement grid visibility modes (always/dragging/never)
-- [ ] Add smooth transitions for snap (150ms CSS transition)
-- [ ] Add fade in/out animations for grid visibility
-- [ ] Style ghost outlines properly (blue with transparency)
-- [ ] Add hover effects for resize handles
-- [ ] Ensure all colors match design spec
-- [ ] Add loading states if needed
+
+### Settings Modal Redesign
+- [ ] Remove obsolete settings from SettingsModal.jsx:
+  - [ ] Chat Width (pixels) - obsolete, managed by grid
+  - [ ] Default Prompt Height (pixels) - obsolete, managed by grid
+  - [ ] Chat Position (Left/Right) - obsolete, components positioned on grid
+- [ ] Implement config management system:
+  - [ ] Create `useConfig` hook to load config.json
+  - [ ] Merge config.json with localStorage overrides on app load
+  - [ ] Export merged config for app to use
+- [ ] Add Canvas Grid settings to Settings modal:
+  - [ ] Grid Columns (number input, 6-24 range)
+  - [ ] Grid Rows (number input, 4-16 range)
+  - [ ] Cell Min Size (number input, 30-100px range)
+  - [ ] Grid Visibility (dropdown: always/dragging/never)
+  - [ ] Snap Threshold (number input, 10-50px range)
+  - [ ] Enable Persistence (checkbox)
+- [ ] Add App settings to Settings modal:
+  - [ ] Server URL (text input)
+  - [ ] Reconnection Attempts (number input, 1-10 range)
+  - [ ] Reconnection Delay (number input, 500-5000ms range)
+- [ ] Implement Save Settings:
+  - [ ] Save changes to localStorage as config overrides
+  - [ ] Show "Settings saved. Reloading page..." message
+  - [ ] Auto-reload page after 1 second to apply changes
+- [ ] Implement Reset to Defaults:
+  - [ ] Add "Reset to Defaults" button
+  - [ ] Clear localStorage overrides
+  - [ ] Reload page to apply defaults from config.json
+
+### Grid Visibility Modes Implementation
+- [ ] Implement 'always' mode: grid always visible
+- [ ] Implement 'dragging' mode: grid visible only during drag/resize
+- [ ] Implement 'never' mode: grid hidden but snapping still works
+- [ ] Add state to track when dragging/resizing is active
+- [ ] Toggle grid visibility based on mode and drag/resize state
+
+### Code Cleanup
+- [ ] Remove unnecessary console.logs:
+  - [ ] Canvas.jsx: "Drag started", "Drag ended"
+  - [ ] Canvas.jsx: "Resize started", "Resize ended"
+  - [ ] Canvas.jsx: "Mouse left canvas" messages
+  - [ ] Canvas.jsx: "Rendering grid" (very noisy)
+  - [ ] Chat.jsx: Stream event logs (start, chunk, end, response)
+- [ ] Keep useful console.logs:
+  - [ ] Socket connection/disconnection
+  - [ ] Layout persistence messages
+  - [ ] Session registration
 - [ ] Final CSS polish
-- [ ] Remove debug console.logs
+- [ ] Ensure all colors consistent
 
 **Acceptance Criteria**:
-- ✅ All grid settings loaded from config.json
-- ✅ Grid visibility mode 'dragging' shows/hides grid appropriately
-- ✅ Grid visibility mode 'never' hides grid but snapping works
+- ✅ Settings modal loads current config (config.json + localStorage overrides)
+- ✅ All canvas grid settings editable in UI
+- ✅ All app settings editable in UI
+- ✅ Save Settings → updates localStorage → reloads page
+- ✅ Settings persist after page reload
+- ✅ Reset to Defaults → clears overrides → restores config.json defaults
 - ✅ Grid visibility mode 'always' shows grid permanently
-- ✅ Smooth 150ms snap animation
-- ✅ Ghost outlines styled correctly (blue, semi-transparent)
-- ✅ Resize handles visible on hover
-- ✅ All styling matches spec
+- ✅ Grid visibility mode 'dragging' shows grid only during drag/resize
+- ✅ Grid visibility mode 'never' hides grid but snapping works
+- ✅ Changing columns/rows/cellMinSize → rebuilds grid after reload
+- ✅ Debug console.logs removed (only keep useful ones)
 - ✅ No visual glitches or artifacts
-- ✅ No unnecessary console logs
+- ✅ Settings modal has clear, organized sections
 
 **How to Test**:
-1. Change `gridVisibility` to each mode → verify behavior
-2. Change `columns`, `rows` → verify grid updates
-3. Change `cellMinSize` → verify minimum enforced
-4. Verify all animations are smooth
-5. Verify all colors match spec
-6. Test on different browsers (Chrome, Firefox, Safari)
-7. Do visual regression testing against spec
 
-**Estimated Time**: 2-3 hours
+### Settings Modal
+1. Open Settings → verify shows current config values
+2. Change Grid Columns to 16 → Save → verify page reloads → verify grid has 16 columns
+3. Change Grid Visibility to 'dragging' → Save → reload → verify grid appears only when dragging
+4. Change Grid Visibility to 'never' → Save → reload → verify grid hidden, snapping works
+5. Change Server URL → Save → reload → verify socket connects to new URL
+6. Click "Reset to Defaults" → verify shows config.json defaults → verify localStorage cleared
+
+### Grid Visibility Modes
+1. Set 'always' → verify grid always visible
+2. Set 'dragging' → verify grid hidden → start dragging → verify grid appears → release → verify grid hides
+3. Set 'never' → verify grid never visible → verify components still snap to grid
+
+### Console Output
+1. Open browser console → verify no drag/resize logs
+2. Verify no "Rendering grid" spam
+3. Verify no stream chunk logs in chat
+4. Verify connection messages still appear
+
+### Cross-browser
+1. Test on Chrome → verify settings work
+2. Test on Firefox → verify settings work
+3. Test on Edge → verify settings work
+
+**Estimated Time**: 3-4 hours
 
 ---
 
 ## Testing Strategy
 
 ### Manual Testing Checklist
-- [ ] All 7 stories pass acceptance criteria
+- [ ] All 6 stories pass acceptance criteria
 - [ ] Works on Chrome, Firefox, Safari
 - [ ] Works on different screen sizes
 - [ ] No console errors or warnings
@@ -233,15 +260,14 @@ This document breaks down the Canvas Grid feature into incremental, testable use
 
 ## Implementation Order
 
-Implement stories **in order** (1 → 7):
+Implement stories **in order** (1 → 6):
 
 1. ✅ **Story 1** - Basic Canvas (COMPLETE)
 2. ✅ **Story 2** - Drag Components (COMPLETE)
 3. ✅ **Story 3** - Resize Components (COMPLETE)
-4. **Story 4** - Chat Toggle
-5. **Story 5** - Session Persistence
-6. **Story 6** - Window Resize
-7. **Story 7** - Configuration & Polish
+4. ✅ **Story 4** - Chat Toggle (COMPLETE)
+5. ✅ **Story 5** - Session Persistence (COMPLETE)
+6. **Story 6** - Configuration & Polish
 
 Each story should be:
 - ✅ Fully implemented
@@ -268,11 +294,10 @@ Each story should be:
 
 - ✅ **Story 1**: 2-3 hours (COMPLETE)
 - ✅ **Story 2**: 2-3 hours (COMPLETE)
-- **Story 3**: 2-3 hours
-- **Story 4**: 30 minutes
-- **Story 5**: 2 hours
-- **Story 6**: 1-2 hours
-- **Story 7**: 2-3 hours
+- ✅ **Story 3**: 2-3 hours (COMPLETE)
+- ✅ **Story 4**: 30 minutes (COMPLETE)
+- ✅ **Story 5**: 2 hours (COMPLETE)
+- **Story 6**: 2-3 hours
 
 **Total**: ~10-14 hours of focused work
 
@@ -280,6 +305,6 @@ Each story should be:
 
 ## Current Status
 
-**Completed**: Stories 1-3
-**Next**: Story 4 - Chat Toggle
-**Progress**: 3/7 stories complete (~43%)
+**Completed**: Stories 1-5
+**Next**: Story 6 - Configuration & Polish
+**Progress**: 5/6 stories complete (~83%)
