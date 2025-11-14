@@ -29,5 +29,5 @@
   border-radius: 8px;
   pointer-events: none;
   z-index: 999;
-  transition: all 0.15s ease;
+  /* No transition - should follow mouse instantly */
 }
