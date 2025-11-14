@@ -209,8 +209,24 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     const maxW = component.maxSize?.w || gridConfig.columns;
     const maxH = component.maxSize?.h || gridConfig.rows;
 
+    // Store original right/bottom edges before clamping
+    const rightEdge = originalSize.x + originalSize.w;
+    const bottomEdge = originalSize.y + originalSize.h;
+
+    // Clamp size
     newGridPos.w = Math.max(minW, Math.min(maxW, newGridPos.w));
     newGridPos.h = Math.max(minH, Math.min(maxH, newGridPos.h));
+
+    // Fix position for handles that move both position and size
+    // This prevents "sticking" when hitting min/max constraints
+    if (handle === 'w' || handle === 'nw' || handle === 'sw') {
+      // Left edge handles: keep right edge stationary
+      newGridPos.x = rightEdge - newGridPos.w;
+    }
+    if (handle === 'n' || handle === 'nw' || handle === 'ne') {
+      // Top edge handles: keep bottom edge stationary
+      newGridPos.y = bottomEdge - newGridPos.h;
+    }
 
     // Constrain to canvas bounds
     newGridPos.x = Math.max(0, Math.min(gridConfig.columns - newGridPos.w, newGridPos.x));
