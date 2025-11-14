@@ -142,6 +142,8 @@ This document breaks down the Canvas Grid feature into incremental, testable use
 
 ## Story 6: Configuration & Polish
 
+**Status**: ✅ COMPLETE
+
 **Goal**: Implement Settings modal to manage config.json settings and polish the UX.
 
 **Tasks**:
@@ -241,10 +243,122 @@ This document breaks down the Canvas Grid feature into incremental, testable use
 
 ---
 
+## Story 7: Component-Owned Metadata (Hybrid Architecture)
+
+**Status**: ⏳ Pending
+
+**Goal**: Refactor component metadata to be owned by components themselves, while Canvas manages layout state. This improves separation of concerns and sets foundation for per-instance configurability.
+
+**Current Architecture Issues**:
+- Component metadata (minSize, maxSize, type) duplicated in App.jsx and Canvas.jsx
+- App.jsx knows too much about canvas internals
+- Hard to extend with new component types
+- Mixing layout data (gridPos) with component metadata (minSize/maxSize)
+
+**Target Hybrid Architecture**:
+```
+App
+├─ Only knows Canvas exists (no component details)
+└─> Canvas
+      ├─ Element registry (which elements exist)
+      ├─ Layout state (positions, sizes, visibility)
+      ├─ Queries component metadata from components
+      ├─> Editor.metadata = { type, minSize, maxSize, removable }
+      └─> Chat.metadata = { type, minSize, maxSize, removable }
+```
+
+**Key Principles**:
+1. **App** - Knows Canvas exists, nothing about elements
+2. **Canvas** - Manages layout (positions, sizes, visibility), queries component metadata
+3. **Components** - Define their own constraints/metadata
+4. **Persistence** - Canvas state is easy to serialize
+5. **Coordination** - Canvas can coordinate layout (snapping, collision)
+6. **Future** - Easy to add per-instance overrides later
+
+**Tasks**:
+
+### 1. Create Component Metadata System
+- [ ] Create `components/registry.js` with component metadata structure
+- [ ] Each component exports metadata: `{ type, minSize, maxSize, removable, defaultSize }`
+- [ ] Editor exports metadata: `{ type: 'Editor', minSize: {w:1,h:1}, maxSize: null, removable: true, defaultSize: {w:6,h:8} }`
+- [ ] Chat exports metadata: `{ type: 'Chat', minSize: {w:1,h:1}, maxSize: null, removable: true, defaultSize: {w:6,h:8} }`
+- [ ] ComponentRegistry imports and re-exports component + metadata
+
+### 2. Refactor Canvas to Use Metadata
+- [ ] Remove `defaultComponents` from Canvas.jsx
+- [ ] Canvas receives `initialLayout` prop instead of `components`
+- [ ] `initialLayout` contains only: `{ id, type, gridPos, visible }`
+- [ ] Canvas merges layout with component metadata: `layout + ComponentRegistry[type].metadata`
+- [ ] Canvas manages layout state internally
+- [ ] Canvas exposes `onLayoutChange(layout)` callback (only layout data, no metadata)
+
+### 3. Refactor App.jsx
+- [ ] Remove all component metadata from App.jsx
+- [ ] `defaultLayout` contains only: `[{ id: 'editor-1', type: 'Editor', gridPos: {x:0,y:0,w:6,h:8}, visible: true }, ...]`
+- [ ] App doesn't import Editor/Chat components (Canvas imports via registry)
+- [ ] App only manages layout persistence, not metadata
+- [ ] localStorage saves only layout data, not metadata
+
+### 4. Update Persistence Logic
+- [ ] `loadLayout()` loads only layout data from localStorage
+- [ ] `saveLayout()` saves only layout data to localStorage
+- [ ] Component metadata comes from component files, never persisted
+- [ ] Merge logic: `defaultLayout.map(layout => ({ ...layout, ...ComponentRegistry[layout.type].metadata }))`
+
+### 5. Update Settings Modal
+- [ ] Settings modal doesn't need changes (manages config.json, not component metadata)
+- [ ] Verify Settings still works after refactor
+
+### 6. Add Documentation
+- [ ] Document component metadata structure in `components/README.md`
+- [ ] Document how to add new component types
+- [ ] Update canvas-grid feature doc with new architecture
+
+**Acceptance Criteria**:
+- ✅ App.jsx has no knowledge of component metadata
+- ✅ Canvas.jsx has no hardcoded component definitions
+- ✅ Component metadata defined in component files only
+- ✅ Layout persistence works (position, size, visibility)
+- ✅ Drag/resize still works correctly
+- ✅ Settings modal still works
+- ✅ localStorage only contains layout data, no metadata
+- ✅ Easy to add new component type by creating component + metadata
+- ✅ No duplicate component definitions
+
+**How to Test**:
+
+### Component Metadata
+1. Check Editor.jsx → verify exports metadata object
+2. Check Chat.jsx → verify exports metadata object
+3. Check registry.js → verify imports and re-exports metadata
+4. Verify no metadata in App.jsx or Canvas.jsx (except runtime merging)
+
+### Layout Persistence
+1. Resize/move components → reload page → verify positions restored
+2. Check localStorage → verify only contains: id, type, gridPos, visible
+3. Verify minSize/maxSize NOT in localStorage
+4. Clear localStorage → verify components use defaultLayout from App.jsx
+
+### Functionality
+1. Drag components → verify works
+2. Resize components → verify respects minSize/maxSize from component metadata
+3. Toggle chat visibility → verify works
+4. Settings modal → verify still works
+
+### Adding New Component Type (Future Proof)
+1. Create new component with metadata export
+2. Add to ComponentRegistry
+3. Add to defaultLayout in App.jsx
+4. Verify component appears and works
+
+**Estimated Time**: 2-3 hours
+
+---
+
 ## Testing Strategy
 
 ### Manual Testing Checklist
-- [ ] All 6 stories pass acceptance criteria
+- [ ] All 7 stories pass acceptance criteria
 - [ ] Works on Chrome, Firefox, Safari
 - [ ] Works on different screen sizes
 - [ ] No console errors or warnings
@@ -260,14 +374,15 @@ This document breaks down the Canvas Grid feature into incremental, testable use
 
 ## Implementation Order
 
-Implement stories **in order** (1 → 6):
+Implement stories **in order** (1 → 7):
 
 1. ✅ **Story 1** - Basic Canvas (COMPLETE)
 2. ✅ **Story 2** - Drag Components (COMPLETE)
 3. ✅ **Story 3** - Resize Components (COMPLETE)
 4. ✅ **Story 4** - Chat Toggle (COMPLETE)
 5. ✅ **Story 5** - Session Persistence (COMPLETE)
-6. **Story 6** - Configuration & Polish
+6. ✅ **Story 6** - Configuration & Polish (COMPLETE)
+7. ⏳ **Story 7** - Component-Owned Metadata (PENDING)
 
 Each story should be:
 - ✅ Fully implemented
@@ -297,14 +412,15 @@ Each story should be:
 - ✅ **Story 3**: 2-3 hours (COMPLETE)
 - ✅ **Story 4**: 30 minutes (COMPLETE)
 - ✅ **Story 5**: 2 hours (COMPLETE)
-- **Story 6**: 2-3 hours
+- ✅ **Story 6**: 3-4 hours (COMPLETE)
+- ⏳ **Story 7**: 2-3 hours (PENDING)
 
-**Total**: ~10-14 hours of focused work
+**Total**: ~14-19 hours of focused work
 
 ---
 
 ## Current Status
 
-**Completed**: Stories 1-5
-**Next**: Story 6 - Configuration & Polish
-**Progress**: 5/6 stories complete (~83%)
+**Completed**: Stories 1-6
+**Next**: Story 7 - Component-Owned Metadata (Hybrid Architecture)
+**Progress**: 6/7 stories complete (~86%)

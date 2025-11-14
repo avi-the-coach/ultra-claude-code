@@ -1,42 +1,60 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import GridComponent from './GridComponent';
-import ComponentRegistry from './ComponentRegistry';
+import ComponentRegistry, { ComponentMetadata } from './ComponentRegistry';
 import { useConfig } from '../hooks/useConfig';
 import './Canvas.css';
 
-// Default component layout
-const defaultComponents = [
-  {
-    id: 'editor-1',
-    type: 'Editor',
-    gridPos: { x: 0, y: 0, w: 6, h: 8 },
-    minSize: { w: 1, h: 1 },
-    maxSize: null,
-    removable: true,
-    visible: true
-  },
-  {
-    id: 'chat-1',
-    type: 'Chat',
-    gridPos: { x: 6, y: 0, w: 6, h: 8 },
-    minSize: { w: 1, h: 1 },
-    maxSize: null,
-    removable: true,
-    visible: true
-  }
-];
-
-function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange }) {
+function Canvas({ initialLayout, socket, sessionId, onLayoutChange }) {
   const canvasRef = useRef(null);
-  const components = propsComponents || defaultComponents;
+
+  // Merge layout with component metadata
+  const mergeLayoutWithMetadata = (layout) => {
+    return layout.map(item => ({
+      ...item,
+      ...ComponentMetadata[item.type]
+    }));
+  };
+
+  // Extract layout data from components (remove metadata)
+  const extractLayoutData = (componentsArray) => {
+    return componentsArray.map(({ id, type, gridPos, visible }) => ({
+      id,
+      type,
+      gridPos,
+      visible
+    }));
+  };
+
+  // Initialize components state with merged data
+  const [components, setComponents] = useState(() =>
+    mergeLayoutWithMetadata(initialLayout)
+  );
+
+  // Update components when initialLayout changes
+  useEffect(() => {
+    setComponents(mergeLayoutWithMetadata(initialLayout));
+    // Update z-index order if new components added
+    setZIndexOrder(initialLayout.map(item => item.id));
+  }, [initialLayout]);
+
   const { config } = useConfig();
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [cellSize, setCellSize] = useState({ width: 0, height: 0 });
   const [dragState, setDragState] = useState(null); // { componentId, offsetX, offsetY, originalPos }
   const [resizeState, setResizeState] = useState(null); // { componentId, handle, originalSize, startPos }
+  const [zIndexOrder, setZIndexOrder] = useState(() => components.map(c => c.id)); // Track stacking order
 
   const gridConfig = config.canvasGrid;
   const isDraggingOrResizing = dragState !== null || resizeState !== null;
+
+  // Bring component to front when clicked
+  const bringToFront = (componentId) => {
+    setZIndexOrder(prev => {
+      // Remove componentId from current position and add to end (top)
+      const filtered = prev.filter(id => id !== componentId);
+      return [...filtered, componentId];
+    });
+  };
 
   // Calculate grid cell sizes
   useEffect(() => {
@@ -69,6 +87,9 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
   const handleDragStart = (componentId, event) => {
     const component = components.find(c => c.id === componentId);
     if (!component) return;
+
+    // Bring component to front
+    bringToFront(componentId);
 
     const rect = event.currentTarget.parentElement.getBoundingClientRect();
     const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -112,7 +133,8 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
         : c
     );
 
-    onLayoutChange(newComponents);
+    // Send only layout data to parent (strip metadata)
+    onLayoutChange(extractLayoutData(newComponents));
   }, [dragState, components, cellSize, gridConfig, snapToGrid, onLayoutChange]);
 
   const handleDragEnd = useCallback(() => {
@@ -125,6 +147,9 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
   const handleResizeStart = (componentId, handle, event) => {
     const component = components.find(c => c.id === componentId);
     if (!component) return;
+
+    // Bring component to front
+    bringToFront(componentId);
 
     setResizeState({
       componentId,
@@ -231,7 +256,8 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
         : c
     );
 
-    onLayoutChange(newComponents);
+    // Send only layout data to parent (strip metadata)
+    onLayoutChange(extractLayoutData(newComponents));
   }, [resizeState, components, cellSize, gridConfig, onLayoutChange]);
 
   const handleResizeEnd = useCallback(() => {
@@ -390,6 +416,15 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
               componentProps.sessionId = sessionId;
             }
 
+            // Calculate z-index based on position in zIndexOrder
+            let zIndex = zIndexOrder.indexOf(component.id);
+
+            // Boost z-index for dragging/resizing component to ensure it stays on top
+            const isActive = dragState?.componentId === component.id || resizeState?.componentId === component.id;
+            if (isActive) {
+              zIndex = 9999; // Very high z-index while dragging/resizing
+            }
+
             return (
               <GridComponent
                 key={component.id}
@@ -399,8 +434,10 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
                 cellSize={cellSize}
                 minSize={component.minSize}
                 maxSize={component.maxSize}
+                zIndex={zIndex}
                 onDragStart={handleDragStart}
                 onResizeStart={handleResizeStart}
+                onClick={() => bringToFront(component.id)}
                 isDragging={dragState?.componentId === component.id}
                 isResizing={resizeState?.componentId === component.id}
               >

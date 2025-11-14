@@ -6,9 +6,11 @@ function GridComponent({
   type,
   gridPos,
   cellSize,
+  zIndex = 0,
   children,
   onDragStart,
   onResizeStart,
+  onClick,
   isDragging,
   isResizing
 }) {
@@ -21,6 +23,7 @@ function GridComponent({
     top: `${gridPos.y * cellSize.height}px`,
     width: `${gridPos.w * cellSize.width}px`,
     height: `${gridPos.h * cellSize.height}px`,
+    zIndex: zIndex,
   };
 
   const handleMouseDown = (e) => {
@@ -55,6 +58,7 @@ function GridComponent({
       style={style}
       data-component-id={id}
       data-component-type={type}
+      onClick={onClick}
     >
       <div
         className="grid-component-header"

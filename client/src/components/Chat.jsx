@@ -291,4 +291,13 @@ function Chat({ socket, sessionId }) {
   );
 }
 
+// Component metadata for canvas grid system
+export const metadata = {
+  type: 'Chat',
+  minSize: { w: 1, h: 1 },
+  maxSize: null,
+  removable: true,
+  defaultSize: { w: 6, h: 8 }
+};
+
 export default Chat;

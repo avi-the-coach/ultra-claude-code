@@ -8,24 +8,18 @@ import HelpModal from './components/HelpModal';
 import config from '../config.json';
 import './App.css';
 
-// Default component layout
-const defaultComponents = [
+// Default layout (layout data only, no component metadata)
+const defaultLayout = [
   {
     id: 'editor-1',
     type: 'Editor',
     gridPos: { x: 0, y: 0, w: 6, h: 8 },
-    minSize: { w: 4, h: 4 },
-    maxSize: null,
-    removable: true,
     visible: true
   },
   {
     id: 'chat-1',
     type: 'Chat',
     gridPos: { x: 6, y: 0, w: 6, h: 8 },
-    minSize: { w: 3, h: 4 },
-    maxSize: { w: 8, h: 12 },
-    removable: true,
     visible: true
   }
 ];
@@ -53,16 +47,18 @@ const loadLayout = () => {
     }
 
     // Merge saved layout with defaults (in case new components were added)
-    const merged = defaultComponents.map(defaultComp => {
-      const savedComp = parsed.components.find(c => c.id === defaultComp.id);
-      if (savedComp) {
+    // Only layout data is stored/merged - metadata comes from components
+    const merged = defaultLayout.map(defaultItem => {
+      const savedItem = parsed.layout.find(c => c.id === defaultItem.id);
+      if (savedItem) {
         return {
-          ...defaultComp,
-          gridPos: savedComp.gridPos,
-          visible: savedComp.visible
+          id: defaultItem.id,
+          type: defaultItem.type,
+          gridPos: savedItem.gridPos,
+          visible: savedItem.visible
         };
       }
-      return defaultComp;
+      return defaultItem;
     });
 
     console.log('Layout loaded from localStorage:', merged);
@@ -73,18 +69,19 @@ const loadLayout = () => {
   }
 };
 
-// Save layout to localStorage
-const saveLayout = (components) => {
+// Save layout to localStorage (layout data only, no metadata)
+const saveLayout = (layoutData) => {
   if (!config.canvasGrid?.enablePersistence) return;
 
   try {
     const toSave = {
       version: LAYOUT_VERSION,
       timestamp: new Date().toISOString(),
-      components: components.map(c => ({
-        id: c.id,
-        gridPos: c.gridPos,
-        visible: c.visible
+      layout: layoutData.map(item => ({
+        id: item.id,
+        type: item.type,
+        gridPos: item.gridPos,
+        visible: item.visible
       }))
     };
 
@@ -97,7 +94,7 @@ const saveLayout = (components) => {
 
 function App() {
   const { socket, sessionId, isConnected } = useSocket();
-  const [components, setComponents] = useState(() => loadLayout() || defaultComponents);
+  const [layout, setLayout] = useState(() => loadLayout() || defaultLayout);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const saveTimeoutRef = useRef(null);
@@ -111,7 +108,7 @@ function App() {
 
     // Set new timeout to save after 500ms
     saveTimeoutRef.current = setTimeout(() => {
-      saveLayout(components);
+      saveLayout(layout);
     }, 500);
 
     // Cleanup
@@ -120,15 +117,15 @@ function App() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [components]);
+  }, [layout]);
 
-  const handleLayoutChange = (newComponents) => {
-    setComponents(newComponents);
+  const handleLayoutChange = (newLayout) => {
+    setLayout(newLayout);
   };
 
   const toggleChat = () => {
-    setComponents(prev => prev.map(c =>
-      c.type === 'Chat' ? { ...c, visible: !c.visible } : c
+    setLayout(prev => prev.map(item =>
+      item.type === 'Chat' ? { ...item, visible: !item.visible } : item
     ));
   };
 
@@ -165,7 +162,7 @@ function App() {
               <HelpCircle size={20} />
             </button>
             <button
-              className={`header-btn ${components.find(c => c.type === 'Chat')?.visible ? 'active' : ''}`}
+              className={`header-btn ${layout.find(item => item.type === 'Chat')?.visible ? 'active' : ''}`}
               onClick={toggleChat}
               title="Toggle Chat"
             >
@@ -175,7 +172,7 @@ function App() {
         </header>
         <main className="app-main">
           <Canvas
-            components={components}
+            initialLayout={layout}
             socket={socket}
             sessionId={sessionId}
             onLayoutChange={handleLayoutChange}

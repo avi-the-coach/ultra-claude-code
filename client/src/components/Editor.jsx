@@ -192,4 +192,13 @@ function Editor() {
   );
 }
 
+// Component metadata for canvas grid system
+export const metadata = {
+  type: 'Editor',
+  minSize: { w: 1, h: 1 },
+  maxSize: null,
+  removable: true,
+  defaultSize: { w: 6, h: 8 }
+};
+
 export default Editor;
