@@ -250,16 +250,31 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
       if (e.key === 'Escape') cleanup();
     };
 
+    const handleMouseLeave = () => {
+      // Mouse left the canvas area - end drag
+      cleanup();
+      console.log('Mouse left canvas, ending drag');
+    };
+
     document.addEventListener('mousemove', handleDragMove);
     document.addEventListener('mouseup', handleDragEnd);
     document.addEventListener('keydown', handleEscape); // ESC to cancel
     window.addEventListener('blur', cleanup); // Clean up if window loses focus
+
+    // Add mouseleave to canvas to detect when mouse exits canvas area
+    if (canvasRef.current) {
+      canvasRef.current.addEventListener('mouseleave', handleMouseLeave);
+    }
 
     return () => {
       document.removeEventListener('mousemove', handleDragMove);
       document.removeEventListener('mouseup', handleDragEnd);
       document.removeEventListener('keydown', handleEscape);
       window.removeEventListener('blur', cleanup);
+
+      if (canvasRef.current) {
+        canvasRef.current.removeEventListener('mouseleave', handleMouseLeave);
+      }
     };
   }, [dragState, handleDragMove, handleDragEnd]);
 
@@ -275,16 +290,31 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
       if (e.key === 'Escape') cleanup();
     };
 
+    const handleMouseLeave = () => {
+      // Mouse left the canvas area - end resize
+      cleanup();
+      console.log('Mouse left canvas, ending resize');
+    };
+
     document.addEventListener('mousemove', handleResizeMove);
     document.addEventListener('mouseup', handleResizeEnd);
     document.addEventListener('keydown', handleEscape); // ESC to cancel
     window.addEventListener('blur', cleanup); // Clean up if window loses focus
+
+    // Add mouseleave to canvas to detect when mouse exits canvas area
+    if (canvasRef.current) {
+      canvasRef.current.addEventListener('mouseleave', handleMouseLeave);
+    }
 
     return () => {
       document.removeEventListener('mousemove', handleResizeMove);
       document.removeEventListener('mouseup', handleResizeEnd);
       document.removeEventListener('keydown', handleEscape);
       window.removeEventListener('blur', cleanup);
+
+      if (canvasRef.current) {
+        canvasRef.current.removeEventListener('mouseleave', handleMouseLeave);
+      }
     };
   }, [resizeState, handleResizeMove, handleResizeEnd]);
 
