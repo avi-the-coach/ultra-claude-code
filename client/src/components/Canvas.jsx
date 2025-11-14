@@ -88,9 +88,13 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     const component = components.find(c => c.id === dragState.componentId);
     if (!component) return;
 
+    // Constrain mouse position to canvas bounds
+    const constrainedClientX = Math.max(canvasRect.left, Math.min(canvasRect.right, event.clientX));
+    const constrainedClientY = Math.max(canvasRect.top, Math.min(canvasRect.bottom, event.clientY));
+
     // Calculate mouse position relative to canvas
-    const mouseX = event.clientX - canvasRect.left - dragState.offsetX;
-    const mouseY = event.clientY - canvasRect.top - dragState.offsetY;
+    const mouseX = constrainedClientX - canvasRect.left - dragState.offsetX;
+    const mouseY = constrainedClientY - canvasRect.top - dragState.offsetY;
 
     // Snap to grid
     const snapped = snapToGrid(mouseX, mouseY);
@@ -143,9 +147,13 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const { originalSize, startPos, handle } = resizeState;
 
+    // Constrain mouse position to canvas bounds
+    const constrainedClientX = Math.max(canvasRect.left, Math.min(canvasRect.right, event.clientX));
+    const constrainedClientY = Math.max(canvasRect.top, Math.min(canvasRect.bottom, event.clientY));
+
     // Calculate delta in pixels
-    const deltaX = event.clientX - startPos.x;
-    const deltaY = event.clientY - startPos.y;
+    const deltaX = constrainedClientX - startPos.x;
+    const deltaY = constrainedClientY - startPos.y;
 
     // Convert to grid cells
     const deltaGridX = Math.round(deltaX / cellSize.width);
