@@ -1,0 +1,81 @@
+.help-modal .modal-content {
+  max-width: 600px;
+}
+
+.help-icon {
+  color: #2563eb;
+}
+
+.help-section {
+  margin-bottom: 1.5rem;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.help-steps,
+.help-features,
+.help-shortcuts {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #6b7280;
+}
+
+.help-steps li,
+.help-features li,
+.help-shortcuts li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.help-features strong {
+  color: #374151;
+  font-weight: 600;
+}
+
+.help-examples {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.example-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.example-prompt {
+  background: white;
+  border: 1px solid #dbeafe;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #1e40af;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.help-shortcuts kbd {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  color: #374151;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.full-width {
+  width: 100%;
+}

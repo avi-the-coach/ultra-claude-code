@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ultra Claude Code - Interactive Server Flow Map</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    #container {
+      width: 100%;
+      height: 100vh;
+      position: relative;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    svg:active {
+      cursor: grabbing;
+    }
+
+    .node {
+      cursor: move;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+    }
+
+    .node rect {
+      stroke-width: 2;
+      rx: 8;
+      ry: 8;
+    }
+
+    .node text {
+      pointer-events: none;
+      user-select: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .node.module rect {
+      fill: #4ade80;
+      stroke: #22c55e;
+    }
+
+    .node.class rect {
+      fill: #60a5fa;
+      stroke: #3b82f6;
+    }
+
+    .node.method rect {
+      fill: #f472b6;
+      stroke: #ec4899;
+    }
+
+    .node.config rect {
+      fill: #fbbf24;
+      stroke: #f59e0b;
+    }
+
+    .node.object rect {
+      fill: #a78bfa;
+      stroke: #8b5cf6;
+    }
+
+    .node.event rect {
+      fill: #fb923c;
+      stroke: #f97316;
+    }
+
+    .node:hover rect {
+      filter: brightness(1.1);
+    }
+
+    .connection {
+      fill: none;
+      stroke: #e0e0e0;
+      stroke-width: 2;
+      marker-end: url(#arrowhead);
+    }
+
+    .label {
+      fill: white;
+      font-size: 24px;
+      font-weight: 700;
+      pointer-events: none;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .phase-label {
+      fill: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    #contextMenu {
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 8px 0;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+
+    #contextMenu div {
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+
+    #contextMenu div:hover {
+      background: #f0f0f0;
+    }
+
+    #info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      max-width: 350px;
+    }
+
+    #info h2 {
+      margin-bottom: 10px;
+      color: #333;
+      font-size: 18px;
+    }
+
+    #info p {
+      margin-bottom: 8px;
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    #info kbd {
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+
+    #legend {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    #legend h3 {
+      margin-bottom: 10px;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      margin-right: 8px;
+      border: 2px solid rgba(0,0,0,0.2);
+    }
+
+    .legend-label {
+      font-size: 12px;
+      color: #666;
+    }
+
+    #copyNotification {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #22c55e;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: none;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <svg id="flowMap"></svg>
+  </div>
+
+  <div id="info">
+    <h2>Interactive Flow Map</h2>
+    <p><strong>Drag</strong> any element to move it around</p>
+    <p><strong>Right-click</strong> or <kbd>Ctrl+Click</kbd> to copy element ID</p>
+    <p><strong>Pan</strong> by dragging the background</p>
+    <p>Copied IDs can be pasted in chat to ask specific questions!</p>
+  </div>
+
+  <div id="legend">
+    <h3>Legend</h3>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#4ade80;border-color:#22c55e;"></div>
+      <span class="legend-label">Module</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#60a5fa;border-color:#3b82f6;"></div>
+      <span class="legend-label">Class</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#f472b6;border-color:#ec4899;"></div>
+      <span class="legend-label">Method</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#fbbf24;border-color:#f59e0b;"></div>
+      <span class="legend-label">Config</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#a78bfa;border-color:#8b5cf6;"></div>
+      <span class="legend-label">Object</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#fb923c;border-color:#f97316;"></div>
+      <span class="legend-label">Event</span>
+    </div>
+  </div>
+
+  <div id="contextMenu">
+    <div id="copyOption">📋 Copy Element ID</div>
+  </div>
+
+  <div id="copyNotification">✓ Copied to clipboard!</div>
+
+  <script>
+    // Flow map data structure
+    const flowData = {
+      nodes: [
+        // Phase 1: Module Imports
+        { id: 'label-imports', x: 600, y: 50, width: 300, height: 40, label: 'MODULE IMPORTS', type: 'label' },
+        { id: 'module-server-py', x: 100, y: 120, width: 150, height: 60, label: 'server.py', type: 'module' },
+        { id: 'module-session-manager', x: 350, y: 120, width: 180, height: 60, label: 'session_manager.py', type: 'module' },
+        { id: 'module-claude-agent', x: 630, y: 120, width: 160, height: 60, label: 'claude_agent.py', type: 'module' },
+        { id: 'module-config', x: 890, y: 120, width: 120, height: 60, label: 'config.py', type: 'module' },
+        { id: 'module-sdk', x: 1100, y: 120, width: 180, height: 60, label: 'ClaudeSDKClient', type: 'module' },
+
+        // Phase 2: Config Loading
+        { id: 'label-config', x: 600, y: 230, width: 300, height: 40, label: 'CONFIG LOADING', type: 'label' },
+        { id: 'method-loadconfig', x: 550, y: 300, width: 150, height: 60, label: 'loadConfig()', type: 'method' },
+        { id: 'config-json', x: 800, y: 300, width: 130, height: 60, label: 'config.json', type: 'config' },
+
+        // Phase 3: SessionManager Init
+        { id: 'label-session-init', x: 600, y: 420, width: 300, height: 40, label: 'SESSIONMANAGER INIT', type: 'label' },
+        { id: 'class-sessionmanager', x: 300, y: 490, width: 200, height: 60, label: 'SessionManager()', type: 'class' },
+        { id: 'method-sm-init', x: 300, y: 590, width: 200, height: 60, label: '__init__()', type: 'method' },
+
+        // Phase 4: ClaudeAgent Init
+        { id: 'label-agent-init', x: 600, y: 710, width: 300, height: 40, label: 'CLAUDE AGENT INIT', type: 'label' },
+        { id: 'class-claudeagent', x: 550, y: 780, width: 200, height: 60, label: 'ClaudeAgent()', type: 'class' },
+        { id: 'method-agent-init', x: 350, y: 880, width: 180, height: 60, label: '__init__()', type: 'method' },
+        { id: 'method-load-instructions', x: 600, y: 880, width: 200, height: 60, label: '_load_instructions()', type: 'method' },
+        { id: 'config-instructions-file', x: 870, y: 880, width: 200, height: 60, label: 'agent-instructions.md', type: 'config' },
+
+        // Phase 5: Persistent SDK Client
+        { id: 'label-sdk-persist', x: 600, y: 1000, width: 300, height: 40, label: 'PERSISTENT SDK CLIENT', type: 'label' },
+        { id: 'object-sdk-client', x: 450, y: 1070, width: 220, height: 60, label: 'ClaudeSDKClient()', type: 'object' },
+        { id: 'object-connected-flag', x: 750, y: 1070, width: 180, height: 60, label: '_connected = False', type: 'object' },
+
+        // Phase 6: Global Session Storage
+        { id: 'label-session-storage', x: 600, y: 1190, width: 300, height: 40, label: 'GLOBAL SESSION', type: 'label' },
+        { id: 'object-global-session', x: 500, y: 1260, width: 200, height: 80, label: 'globalSession {}\n(stores agent)', type: 'object' },
+
+        // Phase 7: Event Handlers
+        { id: 'label-events', x: 600, y: 1400, width: 300, height: 40, label: 'EVENT HANDLERS', type: 'label' },
+        { id: 'event-connect', x: 200, y: 1470, width: 150, height: 60, label: '@sio.event\nconnect', type: 'event' },
+        { id: 'event-askclaudecode', x: 420, y: 1470, width: 180, height: 60, label: '@sio.event\naskClaudeCode', type: 'event' },
+        { id: 'event-disconnect', x: 670, y: 1470, width: 150, height: 60, label: '@sio.event\ndisconnect', type: 'event' },
+
+        // Phase 8: Streaming Events
+        { id: 'label-streaming', x: 600, y: 1590, width: 300, height: 40, label: 'STREAMING EVENTS', type: 'label' },
+        { id: 'event-stream-start', x: 300, y: 1660, width: 180, height: 60, label: 'claudeStreamStart', type: 'event' },
+        { id: 'event-stream-chunk', x: 540, y: 1660, width: 180, height: 60, label: 'claudeStreamChunk', type: 'event' },
+        { id: 'event-stream-end', x: 780, y: 1660, width: 180, height: 60, label: 'claudeStreamEnd', type: 'event' },
+        { id: 'event-response', x: 1020, y: 1660, width: 180, height: 60, label: 'claudeResponse', type: 'event' },
+
+        // Phase 9: Server Start
+        { id: 'label-server-start', x: 600, y: 1790, width: 300, height: 40, label: 'UVICORN SERVER START', type: 'label' },
+        { id: 'object-uvicorn', x: 550, y: 1860, width: 200, height: 60, label: 'uvicorn.run()', type: 'object' },
+      ],
+
+      connections: [
+        // Imports
+        { from: 'module-server-py', to: 'module-session-manager' },
+        { from: 'module-session-manager', to: 'module-claude-agent' },
+        { from: 'module-claude-agent', to: 'module-sdk' },
+        { from: 'module-server-py', to: 'module-config' },
+
+        // Config loading
+        { from: 'module-config', to: 'method-loadconfig' },
+        { from: 'method-loadconfig', to: 'config-json' },
+
+        // SessionManager init
+        { from: 'module-server-py', to: 'class-sessionmanager' },
+        { from: 'class-sessionmanager', to: 'method-sm-init' },
+
+        // ClaudeAgent init
+        { from: 'method-sm-init', to: 'class-claudeagent' },
+        { from: 'class-claudeagent', to: 'method-agent-init' },
+        { from: 'method-agent-init', to: 'method-load-instructions' },
+        { from: 'method-load-instructions', to: 'config-instructions-file' },
+
+        // Persistent SDK
+        { from: 'method-agent-init', to: 'object-sdk-client' },
+        { from: 'method-agent-init', to: 'object-connected-flag' },
+
+        // Global session
+        { from: 'method-sm-init', to: 'object-global-session' },
+        { from: 'object-sdk-client', to: 'object-global-session' },
+
+        // Event handlers
+        { from: 'module-server-py', to: 'event-connect' },
+        { from: 'module-server-py', to: 'event-askclaudecode' },
+        { from: 'module-server-py', to: 'event-disconnect' },
+
+        // Streaming
+        { from: 'event-askclaudecode', to: 'event-stream-start' },
+        { from: 'event-stream-start', to: 'event-stream-chunk' },
+        { from: 'event-stream-chunk', to: 'event-stream-end' },
+        { from: 'event-stream-end', to: 'event-response' },
+
+        // Server start
+        { from: 'module-server-py', to: 'object-uvicorn' },
+      ]
+    };
+
+    // SVG setup
+    const svg = document.getElementById('flowMap');
+    const svgNS = 'http://www.w3.org/2000/svg';
+
+    // Create arrow marker
+    const defs = document.createElementNS(svgNS, 'defs');
+    const marker = document.createElementNS(svgNS, 'marker');
+    marker.setAttribute('id', 'arrowhead');
+    marker.setAttribute('markerWidth', '10');
+    marker.setAttribute('markerHeight', '10');
+    marker.setAttribute('refX', '9');
+    marker.setAttribute('refY', '3');
+    marker.setAttribute('orient', 'auto');
+    const polygon = document.createElementNS(svgNS, 'polygon');
+    polygon.setAttribute('points', '0 0, 10 3, 0 6');
+    polygon.setAttribute('fill', '#e0e0e0');
+    marker.appendChild(polygon);
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+
+    // Create main group for panning
+    const mainGroup = document.createElementNS(svgNS, 'g');
+    svg.appendChild(mainGroup);
+
+    // Store connection lines for updates
+    const connectionElements = [];
+
+    // Draw connections
+    flowData.connections.forEach(conn => {
+      const fromNode = flowData.nodes.find(n => n.id === conn.from);
+      const toNode = flowData.nodes.find(n => n.id === conn.to);
+
+      if (fromNode && toNode) {
+        const line = document.createElementNS(svgNS, 'path');
+        line.classList.add('connection');
+        line.setAttribute('data-from', conn.from);
+        line.setAttribute('data-to', conn.to);
+        mainGroup.appendChild(line);
+        connectionElements.push({ line, from: fromNode, to: toNode });
+      }
+    });
+
+    // Function to update connection path
+    function updateConnection(connEl) {
+      const { line, from, to } = connEl;
+      const fromX = from.x + from.width / 2;
+      const fromY = from.y + from.height;
+      const toX = to.x + to.width / 2;
+      const toY = to.y;
+
+      const midY = (fromY + toY) / 2;
+      const path = `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`;
+      line.setAttribute('d', path);
+    }
+
+    // Update all connections
+    function updateAllConnections() {
+      connectionElements.forEach(updateConnection);
+    }
+
+    // Draw nodes
+    flowData.nodes.forEach(node => {
+      if (node.type === 'label') {
+        // Phase labels
+        const text = document.createElementNS(svgNS, 'text');
+        text.classList.add('phase-label');
+        text.setAttribute('x', node.x + node.width / 2);
+        text.setAttribute('y', node.y + 25);
+        text.setAttribute('text-anchor', 'middle');
+        text.textContent = node.label;
+        mainGroup.appendChild(text);
+      } else {
+        // Regular nodes
+        const group = document.createElementNS(svgNS, 'g');
+        group.classList.add('node', node.type);
+        group.setAttribute('data-id', node.id);
+
+        const rect = document.createElementNS(svgNS, 'rect');
+        rect.setAttribute('x', node.x);
+        rect.setAttribute('y', node.y);
+        rect.setAttribute('width', node.width);
+        rect.setAttribute('height', node.height);
+
+        const text = document.createElementNS(svgNS, 'text');
+        text.setAttribute('x', node.x + node.width / 2);
+        text.setAttribute('y', node.y + node.height / 2 + 5);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', 'white');
+
+        // Handle multi-line text
+        const lines = node.label.split('\n');
+        if (lines.length > 1) {
+          lines.forEach((line, i) => {
+            const tspan = document.createElementNS(svgNS, 'tspan');
+            tspan.setAttribute('x', node.x + node.width / 2);
+            tspan.setAttribute('dy', i === 0 ? -8 : 16);
+            tspan.textContent = line;
+            text.appendChild(tspan);
+          });
+        } else {
+          text.textContent = node.label;
+        }
+
+        group.appendChild(rect);
+        group.appendChild(text);
+        mainGroup.appendChild(group);
+
+        // Make draggable
+        let isDragging = false;
+        let startX, startY;
+
+        group.addEventListener('mousedown', (e) => {
+          if (e.ctrlKey || e.button === 2) return; // Ignore ctrl+click and right-click
+          isDragging = true;
+          startX = e.clientX - node.x;
+          startY = e.clientY - node.y;
+          e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          node.x = e.clientX - startX;
+          node.y = e.clientY - startY;
+          rect.setAttribute('x', node.x);
+          rect.setAttribute('y', node.y);
+          text.setAttribute('x', node.x + node.width / 2);
+          text.setAttribute('y', node.y + node.height / 2 + 5);
+
+          // Update tspans if multi-line
+          const tspans = text.querySelectorAll('tspan');
+          tspans.forEach(tspan => {
+            tspan.setAttribute('x', node.x + node.width / 2);
+          });
+
+          updateAllConnections();
+        });
+
+        document.addEventListener('mouseup', () => {
+          isDragging = false;
+        });
+
+        // Context menu
+        group.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          showContextMenu(e, node.id);
+        });
+
+        // Ctrl+Click
+        group.addEventListener('click', (e) => {
+          if (e.ctrlKey) {
+            copyToClipboard(node.id);
+          }
+        });
+      }
+    });
+
+    // Initial connection update
+    updateAllConnections();
+
+    // Context menu
+    const contextMenu = document.getElementById('contextMenu');
+    const copyOption = document.getElementById('copyOption');
+
+    function showContextMenu(e, nodeId) {
+      contextMenu.style.display = 'block';
+      contextMenu.style.left = e.pageX + 'px';
+      contextMenu.style.top = e.pageY + 'px';
+
+      copyOption.onclick = () => {
+        copyToClipboard(nodeId);
+        contextMenu.style.display = 'none';
+      };
+    }
+
+    document.addEventListener('click', () => {
+      contextMenu.style.display = 'none';
+    });
+
+    // Copy to clipboard
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const notification = document.getElementById('copyNotification');
+        notification.style.display = 'block';
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 2000);
+      });
+    }
+
+    // Pan the SVG
+    let isPanning = false;
+    let panStartX, panStartY;
+    let currentTransform = { x: 0, y: 0 };
+
+    svg.addEventListener('mousedown', (e) => {
+      if (e.target === svg) {
+        isPanning = true;
+        panStartX = e.clientX - currentTransform.x;
+        panStartY = e.clientY - currentTransform.y;
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      currentTransform.x = e.clientX - panStartX;
+      currentTransform.y = e.clientY - panStartY;
+      mainGroup.setAttribute('transform', `translate(${currentTransform.x}, ${currentTransform.y})`);
+    });
+
+    document.addEventListener('mouseup', () => {
+      isPanning = false;
+    });
+  </script>
+</body>
+</html>

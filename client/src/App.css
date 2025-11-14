@@ -1,0 +1,177 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f3f4f6;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.connection-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.header-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.header-btn.active {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.header-btn.active:hover {
+  background: #bfdbfe;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.connected {
+  background: #10b981;
+}
+
+.status-dot.disconnected {
+  background: #ef4444;
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  font-weight: 600;
+  color: #374151;
+}
+
+.session-id {
+  color: #6b7280;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid #e5e7eb;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  padding: 1rem;
+  overflow: hidden;
+  gap: 0;
+}
+
+.editor-panel {
+  min-width: 300px;
+  display: flex;
+  overflow: hidden;
+}
+
+.chat-panel {
+  min-width: 300px;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Resize handle between panels (DEPRECATED - old two-panel layout) */
+.panel-resize-handle {
+  width: 8px;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.panel-resize-handle:hover .resize-handle-bar,
+.panel-resize-handle.resizing .resize-handle-bar {
+  background: #2563eb;
+  width: 3px;
+}
+
+.resize-handle-bar {
+  width: 1px;
+  height: 100%;
+  background: #d1d5db;
+  transition: all 0.2s;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  .app-main {
+    flex-direction: column;
+  }
+
+  .editor-panel,
+  .chat-panel {
+    width: 100% !important;
+    min-width: 100%;
+  }
+
+  .panel-resize-handle {
+    display: none;
+  }
+
+  .app-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .session-id {
+    display: none;
+  }
+}

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ultra Claude Code - Test Client</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+    .status {
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .status.connecting { background-color: #fff3cd; color: #856404; }
+    .status.connected { background-color: #d4edda; color: #155724; }
+    .status.error { background-color: #f8d7da; color: #721c24; }
+
+    .document-area, .prompt-area, .response-area {
+      margin: 20px 0;
+      padding: 15px;
+      background-color: white;
+      border-radius: 5px;
+      border-left: 4px solid #007bff;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background-color: #0056b3; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+    .tools-info {
+      background-color: #e7f3ff;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .log {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #2d2d2d;
+      color: #f8f8f2;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry { margin: 5px 0; }
+    .log-entry.info { color: #a6e22e; }
+    .log-entry.success { color: #66d9ef; }
+    .log-entry.error { color: #f92672; }
+  </style>
+</head>
+<body>
+  <h1>Ultra Claude Code - Test Client</h1>
+  <p style="color: #666; font-size: 14px; margin-top: -10px;">
+    Real-time streaming with persistent SDK connection
+  </p>
+
+  <div id="status" class="status connecting">Connecting to server...</div>
+
+  <div class="tools-info">
+    <strong>Architecture:</strong><br>
+    • Unified context always sent (document, referredText, referredAddress, history, instructions)<br>
+    • No tools - direct prompting with JSON response<br>
+    • Instructions loaded from configurable .md file
+  </div>
+
+  <div class="document-area">
+    <strong>Document Content:</strong>
+    <textarea id="documentText" rows="10" placeholder="Enter document content here..."></textarea>
+  </div>
+
+  <div class="prompt-area">
+    <strong>Your Request:</strong><br>
+    <input id="prompt" type="text" placeholder="E.g., 'Summarize this document' or 'What is Lorem ipsum?'" disabled>
+    <br><br>
+    <button id="sendBtn" onclick="sendMessage()" disabled>Send Request</button>
+    <button id="sendWithSelectionBtn" onclick="sendWithSelection()" disabled>Send with Selection</button>
+    <button onclick="clearAll()">Clear All</button>
+  </div>
+
+  <div class="response-area">
+    <strong>Response:</strong>
+    <div id="responseText" style="margin-top: 10px; color: #666;">
+      <em>No response yet</em>
+    </div>
+  </div>
+
+  <div class="log">
+    <strong style="color: #f8f8f2;">Console Log:</strong>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    // Logger
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    // Socket.io connection
+    log('Initializing Socket.io client...', 'info');
+    const socket = io('http://localhost:3002', {
+      transports: ['websocket', 'polling']
+    });
+
+    let sessionId = null;
+
+    // Connection event handlers
+    socket.on('connect', () => {
+      log('Socket.io connection established', 'success');
+    });
+
+    socket.on('sessionRegistered', (data) => {
+      sessionId = data.sessionId;
+      const statusDiv = document.getElementById('status');
+      statusDiv.className = 'status connected';
+      statusDiv.innerHTML = `Connected! Session ID: <strong>${sessionId}</strong>`;
+
+      // Enable input
+      document.getElementById('prompt').disabled = false;
+      document.getElementById('sendBtn').disabled = false;
+      document.getElementById('sendWithSelectionBtn').disabled = false;
+
+      log(`Session registered: ${sessionId}`, 'success');
+    });
+
+    // Streaming events
+    let streamingText = '';
+
+    socket.on('claudeStreamStart', (data) => {
+      streamingText = '';
+      const responseDiv = document.getElementById('responseText');
+      responseDiv.innerHTML = `<div style="color:#666;"><strong>Streaming...</strong><br><span id="streamText"></span></div>`;
+      log('Streaming started', 'info');
+    });
+
+    socket.on('claudeStreamChunk', (data) => {
+      streamingText += data.text;
+      const streamSpan = document.getElementById('streamText');
+      if (streamSpan) {
+        streamSpan.textContent = streamingText;
+      }
+    });
+
+    socket.on('claudeStreamEnd', (data) => {
+      log('Streaming complete', 'success');
+    });
+
+    socket.on('claudeResponse', (data) => {
+      const responseDiv = document.getElementById('responseText');
+
+      let html = `<div><strong>Conversation Message:</strong><br>${data.conversationMessage || 'N/A'}</div>`;
+
+      // Check for document update (presence = update happened)
+      if (data.documentUpdate) {
+        html += `<div style="margin-top:10px;"><strong>Document Update:</strong><br><pre style="background:#f0f0f0;padding:10px;border-radius:4px;">${data.documentUpdate}</pre></div>`;
+      }
+
+      if (data.updateRange) {
+        html += `<div><strong>Update Range:</strong> ${data.updateRange}</div>`;
+      }
+
+      responseDiv.innerHTML = html;
+
+      log('Response received from server', 'success');
+      log(`  Has documentUpdate: ${!!data.documentUpdate}`, 'info');
+      if (data.updateRange) {
+        log(`  Update range: ${data.updateRange}`, 'info');
+      }
+    });
+
+    socket.on('connect_error', (error) => {
+      const statusDiv = document.getElementById('status');
+      statusDiv.className = 'status error';
+      statusDiv.innerHTML = `Connection Error: ${error.message}`;
+      log(`Connection error: ${error.message}`, 'error');
+    });
+
+    socket.on('disconnect', (reason) => {
+      const statusDiv = document.getElementById('status');
+      statusDiv.className = 'status error';
+      statusDiv.innerHTML = `Disconnected: ${reason}`;
+
+      document.getElementById('prompt').disabled = true;
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('sendWithSelectionBtn').disabled = true;
+
+      log(`Disconnected: ${reason}`, 'error');
+    });
+
+    // Send message function (without selection)
+    function sendMessage() {
+      const promptInput = document.getElementById('prompt');
+      const documentText = document.getElementById('documentText');
+      const prompt = promptInput.value.trim();
+
+      if (!prompt) {
+        alert('Please enter a request');
+        return;
+      }
+
+      if (!sessionId) {
+        alert('Not connected to server');
+        return;
+      }
+
+      const docContent = documentText.value || '';
+
+      // Build context with ALL fields (always)
+      const context = {
+        documentContent: docContent,
+        referredText: docContent,  // Full document
+        referredAddress: docContent ? `0:${docContent.length}` : '0:0',
+        conversationHistory: [],
+        systemInstructions: ''  // Will be loaded from file by agent
+      };
+
+      log(`Sending request: "${prompt}"`, 'info');
+      log(`  Document length: ${docContent.length} chars`, 'info');
+      log(`  Referred address: ${context.referredAddress}`, 'info');
+
+      socket.emit('askClaudeCode', {
+        sessionId: sessionId,
+        prompt: prompt,
+        context: context
+      });
+
+      // Clear prompt
+      promptInput.value = '';
+    }
+
+    // Send with selection
+    function sendWithSelection() {
+      const promptInput = document.getElementById('prompt');
+      const documentText = document.getElementById('documentText');
+      const prompt = promptInput.value.trim();
+
+      if (!prompt) {
+        alert('Please enter a request');
+        return;
+      }
+
+      if (!sessionId) {
+        alert('Not connected to server');
+        return;
+      }
+
+      // Get selection from textarea
+      const selStart = documentText.selectionStart;
+      const selEnd = documentText.selectionEnd;
+      const selText = documentText.value.substring(selStart, selEnd);
+      const docContent = documentText.value || '';
+
+      if (!selText) {
+        alert('Please select some text in the document first');
+        return;
+      }
+
+      // Build context with ALL fields (always)
+      const context = {
+        documentContent: docContent,
+        referredText: selText,  // Selected text
+        referredAddress: `${selStart}:${selEnd}`,  // Selection range
+        conversationHistory: [],
+        systemInstructions: ''  // Will be loaded from file by agent
+      };
+
+      log(`Sending request with selection: "${prompt}"`, 'info');
+      log(`  Selection: ${selStart}-${selEnd} (${selText.length} chars)`, 'info');
+      log(`  Referred address: ${context.referredAddress}`, 'info');
+
+      socket.emit('askClaudeCode', {
+        sessionId: sessionId,
+        prompt: prompt,
+        context: context
+      });
+
+      // Clear prompt
+      promptInput.value = '';
+    }
+
+    // Clear all
+    function clearAll() {
+      document.getElementById('documentText').value = '';
+      document.getElementById('prompt').value = '';
+      document.getElementById('responseText').innerHTML = '<em>No response yet</em>';
+      log('Cleared all fields', 'info');
+    }
+
+    // Allow Enter key to send
+    document.getElementById('prompt').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    log('Attempting to connect to ws://localhost:3002...', 'info');
+  </script>
+</body>
+</html>

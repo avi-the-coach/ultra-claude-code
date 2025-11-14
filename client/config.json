@@ -1,0 +1,14 @@
+{
+  "devPort": 5173,
+  "serverUrl": "http://localhost:3002",
+  "reconnectionAttempts": 5,
+  "reconnectionDelay": 1000,
+  "canvasGrid": {
+    "columns": 12,
+    "rows": 8,
+    "cellMinSize": 50,
+    "gridVisibility": "always",
+    "snapThreshold": 20,
+    "enablePersistence": true
+  }
+}

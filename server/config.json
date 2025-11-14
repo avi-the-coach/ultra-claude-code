@@ -1,0 +1,6 @@
+{
+  "port": 3002,
+  "host": "localhost",
+  "corsOrigin": "*",
+  "editor-agent-instructions": "instructions/agent-instructions.md"
+}
