@@ -10,7 +10,7 @@ const defaultComponents = [
     id: 'editor-1',
     type: 'Editor',
     gridPos: { x: 0, y: 0, w: 6, h: 8 },
-    minSize: { w: 4, h: 4 },
+    minSize: { w: 1, h: 1 },
     maxSize: null,
     removable: true,
     visible: true
@@ -19,8 +19,8 @@ const defaultComponents = [
     id: 'chat-1',
     type: 'Chat',
     gridPos: { x: 6, y: 0, w: 6, h: 8 },
-    minSize: { w: 3, h: 4 },
-    maxSize: { w: 8, h: 12 },
+    minSize: { w: 1, h: 1 },
+    maxSize: null,
     removable: true,
     visible: true
   }
