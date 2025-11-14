@@ -375,7 +375,10 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
   };
 
   return (
-    <div ref={canvasRef} className="canvas">
+    <div
+      ref={canvasRef}
+      className={`canvas ${dragState || resizeState ? 'no-select' : ''}`}
+    >
       {renderGrid()}
       <div className="canvas-components">
         {components

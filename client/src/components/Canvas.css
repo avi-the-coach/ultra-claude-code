@@ -31,3 +31,13 @@
   z-index: 999;
   /* No transition - should follow mouse instantly */
 }
+
+/* Disable text selection during drag/resize */
+.canvas.no-select,
+.canvas.no-select * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  cursor: inherit !important; /* Preserve resize/grab cursors */
+}
