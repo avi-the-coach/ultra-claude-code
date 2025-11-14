@@ -33,7 +33,6 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
   const [cellSize, setCellSize] = useState({ width: 0, height: 0 });
   const [dragState, setDragState] = useState(null); // { componentId, offsetX, offsetY, originalPos }
   const [resizeState, setResizeState] = useState(null); // { componentId, handle, originalSize, startPos }
-  const [ghostPosition, setGhostPosition] = useState(null); // { x, y, w, h }
 
   const gridConfig = config.canvasGrid;
 
@@ -102,34 +101,23 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     const constrainedX = Math.max(0, Math.min(maxX, snapped.x));
     const constrainedY = Math.max(0, Math.min(maxY, snapped.y));
 
-    setGhostPosition({
-      x: constrainedX,
-      y: constrainedY,
-      w: component.gridPos.w,
-      h: component.gridPos.h
-    });
-  }, [dragState, components, cellSize, gridConfig, snapToGrid]);
-
-  const handleDragEnd = useCallback(() => {
-    if (!dragState || !ghostPosition) {
-      setDragState(null);
-      setGhostPosition(null);
-      return;
-    }
-
-    // Update component position
+    // Update component position directly
     const newComponents = components.map(c =>
       c.id === dragState.componentId
-        ? { ...c, gridPos: { ...c.gridPos, x: ghostPosition.x, y: ghostPosition.y } }
+        ? { ...c, gridPos: { ...c.gridPos, x: constrainedX, y: constrainedY } }
         : c
     );
 
     onLayoutChange(newComponents);
-    setDragState(null);
-    setGhostPosition(null);
+  }, [dragState, components, cellSize, gridConfig, snapToGrid, onLayoutChange]);
 
-    console.log('Drag ended, new position:', ghostPosition);
-  }, [dragState, ghostPosition, components, onLayoutChange]);
+  const handleDragEnd = useCallback(() => {
+    if (!dragState) return;
+
+    setDragState(null);
+
+    console.log('Drag ended');
+  }, [dragState]);
 
   // Resize handlers
   const handleResizeStart = (componentId, handle, event) => {
@@ -232,29 +220,23 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     newGridPos.x = Math.max(0, Math.min(gridConfig.columns - newGridPos.w, newGridPos.x));
     newGridPos.y = Math.max(0, Math.min(gridConfig.rows - newGridPos.h, newGridPos.y));
 
-    setGhostPosition(newGridPos);
-  }, [resizeState, components, cellSize, gridConfig]);
-
-  const handleResizeEnd = useCallback(() => {
-    if (!resizeState || !ghostPosition) {
-      setResizeState(null);
-      setGhostPosition(null);
-      return;
-    }
-
-    // Update component size
+    // Update component size directly
     const newComponents = components.map(c =>
       c.id === resizeState.componentId
-        ? { ...c, gridPos: ghostPosition }
+        ? { ...c, gridPos: newGridPos }
         : c
     );
 
     onLayoutChange(newComponents);
-    setResizeState(null);
-    setGhostPosition(null);
+  }, [resizeState, components, cellSize, gridConfig, onLayoutChange]);
 
-    console.log('Resize ended, new size:', ghostPosition);
-  }, [resizeState, ghostPosition, components, onLayoutChange]);
+  const handleResizeEnd = useCallback(() => {
+    if (!resizeState) return;
+
+    setResizeState(null);
+
+    console.log('Resize ended');
+  }, [resizeState]);
 
   // Mouse event listeners for drag
   useEffect(() => {
@@ -262,7 +244,6 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
 
     const cleanup = () => {
       setDragState(null);
-      setGhostPosition(null);
     };
 
     const handleEscape = (e) => {
@@ -288,7 +269,6 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
 
     const cleanup = () => {
       setResizeState(null);
-      setGhostPosition(null);
     };
 
     const handleEscape = (e) => {
@@ -356,25 +336,9 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
     );
   };
 
-  // Render ghost outline during drag
-  const renderGhost = () => {
-    if (!ghostPosition) return null;
-
-    const style = {
-      position: 'absolute',
-      left: `${ghostPosition.x * cellSize.width}px`,
-      top: `${ghostPosition.y * cellSize.height}px`,
-      width: `${ghostPosition.w * cellSize.width}px`,
-      height: `${ghostPosition.h * cellSize.height}px`,
-    };
-
-    return <div className="ghost-outline" style={style} />;
-  };
-
   return (
     <div ref={canvasRef} className="canvas">
       {renderGrid()}
-      {renderGhost()}
       <div className="canvas-components">
         {components
           .filter(c => c.visible)
