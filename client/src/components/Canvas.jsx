@@ -260,12 +260,25 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
   useEffect(() => {
     if (!dragState) return;
 
+    const cleanup = () => {
+      setDragState(null);
+      setGhostPosition(null);
+    };
+
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') cleanup();
+    };
+
     document.addEventListener('mousemove', handleDragMove);
     document.addEventListener('mouseup', handleDragEnd);
+    document.addEventListener('keydown', handleEscape); // ESC to cancel
+    window.addEventListener('blur', cleanup); // Clean up if window loses focus
 
     return () => {
       document.removeEventListener('mousemove', handleDragMove);
       document.removeEventListener('mouseup', handleDragEnd);
+      document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('blur', cleanup);
     };
   }, [dragState, handleDragMove, handleDragEnd]);
 
@@ -273,12 +286,25 @@ function Canvas({ components: propsComponents, socket, sessionId, onLayoutChange
   useEffect(() => {
     if (!resizeState) return;
 
+    const cleanup = () => {
+      setResizeState(null);
+      setGhostPosition(null);
+    };
+
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') cleanup();
+    };
+
     document.addEventListener('mousemove', handleResizeMove);
     document.addEventListener('mouseup', handleResizeEnd);
+    document.addEventListener('keydown', handleEscape); // ESC to cancel
+    window.addEventListener('blur', cleanup); // Clean up if window loses focus
 
     return () => {
       document.removeEventListener('mousemove', handleResizeMove);
       document.removeEventListener('mouseup', handleResizeEnd);
+      document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('blur', cleanup);
     };
   }, [resizeState, handleResizeMove, handleResizeEnd]);
 
